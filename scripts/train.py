@@ -16,13 +16,17 @@ from __future__ import annotations
 
 import argparse
 
+import numpy as np
+import pandas as pd
+
 from xgblearn.config import DataConfig, ModelConfig, load_config, set_global_seed
 from xgblearn.data.loaders import load_dataset
 from xgblearn.data.splits import Splits, split_dataset
-from xgblearn.models.evaluate import binary_classification_metrics
+from xgblearn.models.evaluate import binary_classification_metrics, regression_metrics
 from xgblearn.models.train import (
     TrainResult,
     predict_proba_binary,
+    predict_regression,
     train_native,
     train_sklearn,
 )
@@ -34,6 +38,28 @@ from xgblearn.tracking.mlflow_utils import (
 )
 
 _TRAINERS = {"sklearn": train_sklearn, "native": train_native}
+
+
+def _predict(result: TrainResult, X: pd.DataFrame, task: str, ec: bool) -> np.ndarray:
+    """Task-appropriate prediction: probabilities (binary) or values (regression)."""
+    if task == "regression":
+        return predict_regression(result, X, enable_categorical=ec)
+    return predict_proba_binary(result, X, enable_categorical=ec)
+
+
+def _evaluate(
+    result: TrainResult,
+    X: pd.DataFrame,
+    y: np.ndarray,
+    task: str,
+    ec: bool,
+    prefix: str,
+) -> dict[str, float]:
+    """Compute the right metric panel for the task (regression vs. binary)."""
+    preds = _predict(result, X, task, ec)
+    if task == "regression":
+        return regression_metrics(y, preds, prefix=prefix)
+    return binary_classification_metrics(y, preds, prefix=prefix)
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,21 +90,16 @@ def _train_and_log(
     splits: Splits,
     model_cfg: ModelConfig,
     dataset_name: str,
+    task: str,
     fingerprint: str,
     register: bool,
 ) -> tuple[TrainResult, dict[str, float], str]:
     result = _TRAINERS[api](splits, model_cfg)
     ec = model_cfg.enable_categorical
 
-    val_proba = predict_proba_binary(result, splits.X_val, enable_categorical=ec)
-    test_proba = predict_proba_binary(result, splits.X_test, enable_categorical=ec)
     metrics = {
-        **binary_classification_metrics(
-            splits.y_val.to_numpy(), val_proba, prefix="val_"
-        ),
-        **binary_classification_metrics(
-            splits.y_test.to_numpy(), test_proba, prefix="test_"
-        ),
+        **_evaluate(result, splits.X_val, splits.y_val.to_numpy(), task, ec, "val_"),
+        **_evaluate(result, splits.X_test, splits.y_test.to_numpy(), task, ec, "test_"),
     }
     if result.best_iteration is not None:
         metrics["best_iteration"] = float(result.best_iteration)
@@ -103,7 +124,7 @@ def _train_and_log(
     }
 
     sample = splits.X_train.head(5)
-    sample_pred = predict_proba_binary(result, sample, enable_categorical=ec)
+    sample_pred = _predict(result, sample, task, ec)
     run_id = log_run(
         run_name=f"{dataset_name}-baseline-{api}",
         model=result.model,
@@ -126,11 +147,6 @@ def main() -> int:
     set_global_seed(data_cfg.seed)
 
     dataset = load_dataset(data_cfg.dataset, data_cfg.raw_dir)
-    if not dataset.is_classification:
-        raise SystemExit(
-            f"{dataset.name} is a {dataset.task} task; this baseline script "
-            "handles binary classification (see scripts/evaluate.py for regression)."
-        )
     splits = split_dataset(dataset, data_cfg)
     fingerprint = data_fingerprint(dataset.X, dataset.y)
 
@@ -145,20 +161,31 @@ def main() -> int:
     print(f"fingerprint  : {fingerprint}")
     print("-" * 60)
 
+    # Which metrics to surface in the console summary, per task.
+    summary_keys = (
+        ("rmse", "mae", "r2")
+        if dataset.task == "regression"
+        else ("roc_auc", "pr_auc", "logloss")
+    )
+
+    def _line(metrics: dict[str, float], split: str) -> str:
+        parts = [f"{k}={metrics[f'{split}_{k}']:.4f}" for k in summary_keys]
+        return f"          {split:4s}: " + " ".join(parts)
+
     apis = ["sklearn", "native"] if args.api == "both" else [args.api]
     for api in apis:
         _, metrics, run_id = _train_and_log(
-            api, splits, model_cfg, dataset.name, fingerprint, args.register
+            api,
+            splits,
+            model_cfg,
+            dataset.name,
+            dataset.task,
+            fingerprint,
+            args.register,
         )
         print(f"[{api:7s}] run={run_id}")
-        print(
-            f"          val : auc={metrics['val_roc_auc']:.4f} "
-            f"pr_auc={metrics['val_pr_auc']:.4f} logloss={metrics['val_logloss']:.4f}"
-        )
-        print(
-            f"          test: auc={metrics['test_roc_auc']:.4f} "
-            f"pr_auc={metrics['test_pr_auc']:.4f} logloss={metrics['test_logloss']:.4f}"
-        )
+        print(_line(metrics, "val"))
+        print(_line(metrics, "test"))
 
     print("-" * 60)
     print("Done. View runs with:  make mlflow-ui   (then open http://localhost:8080)")

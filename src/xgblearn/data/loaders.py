@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Literal
 
 import pandas as pd
-from sklearn.datasets import load_breast_cancer
+from sklearn.datasets import fetch_california_housing, load_breast_cancer
 
 from xgblearn.config import PROJECT_ROOT
 
@@ -70,6 +70,19 @@ def _build_breast_cancer() -> tuple[pd.DataFrame, pd.Series]:
     return x, y
 
 
+def _build_california_housing() -> tuple[pd.DataFrame, pd.Series]:
+    """California Housing — ~20,640 rows, 8 numeric features, regression.
+
+    Target is median house value in units of $100,000. Downloaded by sklearn on
+    first use (then cached to data/raw/ as parquet).
+    """
+    bunch = fetch_california_housing(as_frame=True)
+    x: pd.DataFrame = bunch.data
+    y: pd.Series = bunch.target.astype("float64")
+    y.name = "MedHouseVal"
+    return x, y
+
+
 # Registry of datasets the repo knows how to load. Later stages append to this.
 _REGISTRY: dict[str, _Spec] = {
     "breast_cancer": _Spec(
@@ -77,6 +90,12 @@ _REGISTRY: dict[str, _Spec] = {
         target_name="target",
         categorical_features=[],
         builder=_build_breast_cancer,
+    ),
+    "california_housing": _Spec(
+        task="regression",
+        target_name="MedHouseVal",
+        categorical_features=[],
+        builder=_build_california_housing,
     ),
 }
 

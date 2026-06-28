@@ -158,3 +158,21 @@ def predict_proba_binary(
     # really a training-time construct that wants a `ref` outside of fit).
     dmat = xgb.DMatrix(X, enable_categorical=enable_categorical)
     return np.asarray(result.model.predict(dmat))
+
+
+def predict_regression(
+    result: TrainResult,
+    X: pd.DataFrame,
+    *,
+    enable_categorical: bool = False,
+) -> np.ndarray:
+    """Predicted values for a regression model, either API.
+
+    For regression the model's raw output *is* the prediction (the link is the
+    identity), so this is simpler than the classification case — but the
+    sklearn-vs-native dispatch is the same shape.
+    """
+    if result.api == "sklearn":
+        return np.asarray(result.model.predict(X))
+    dmat = xgb.DMatrix(X, enable_categorical=enable_categorical)
+    return np.asarray(result.model.predict(dmat))

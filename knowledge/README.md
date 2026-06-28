@@ -25,6 +25,9 @@ compounds instead of evaporating.
 5. [Bias, variance & the knobs](05-bias-variance-and-the-knobs.md) — the
    bias–variance tradeoff, what every hyperparameter does to it, a tuning
    cheat-sheet, and the diagnosis→action playbook.
+6. [Regression & monotonic constraints](06-regression-and-monotonic-constraints.md)
+   — what changes for regression (identity link, `g=F−y`, `h=1`), RMSE/MAE/R²,
+   residual plots, and enforcing domain knowledge with `monotone_constraints`.
 
 ## Hands-on tools
 

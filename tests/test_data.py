@@ -14,6 +14,17 @@ def test_breast_cancer_available() -> None:
     assert "breast_cancer" in available_datasets()
 
 
+def test_california_housing_loads(tmp_path: Path) -> None:
+    ds = load_dataset("california_housing", raw_dir=tmp_path)
+    assert ds.task == "regression"
+    assert not ds.is_classification
+    assert ds.n_features == 8
+    assert ds.n_samples > 20_000
+    assert "MedInc" in ds.X.columns
+    # Continuous target, not 0/1 labels.
+    assert ds.y.nunique() > 100
+
+
 def test_load_breast_cancer_shape(tmp_path: Path) -> None:
     ds = load_dataset("breast_cancer", raw_dir=tmp_path)
     assert ds.task == "binary"
