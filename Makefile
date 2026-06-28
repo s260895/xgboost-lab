@@ -48,8 +48,8 @@ tune:  ## Run Optuna hyperparameter tuning
 evaluate:  ## Evaluate a trained model
 	$(PYTHON) scripts/evaluate.py
 
-mlflow-ui:  ## Launch the MLflow tracking UI
-	$(PYTHON) -m mlflow ui --port $(PORT)
+mlflow-ui:  ## Launch the MLflow tracking UI (reads the sqlite store)
+	$(PYTHON) -m mlflow ui --backend-store-uri sqlite:///mlflow.db --port $(PORT)
 
 clean:  ## Remove caches and build artifacts
 	$(PYTHON) -c "import shutil,glob,os; [shutil.rmtree(p,ignore_errors=True) for p in glob.glob('**/__pycache__',recursive=True)+['.ruff_cache','.mypy_cache','.pytest_cache','build','dist']]"
