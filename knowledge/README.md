@@ -22,6 +22,15 @@ compounds instead of evaporating.
 4. [How trees split & histograms](04-how-trees-split-and-histograms.md) — the
    exact greedy split search, the histogram method (`hist` / `QuantileDMatrix`),
    missing-value handling, and how a tree grows and prunes.
+5. [Bias, variance & the knobs](05-bias-variance-and-the-knobs.md) — the
+   bias–variance tradeoff, what every hyperparameter does to it, a tuning
+   cheat-sheet, and the diagnosis→action playbook.
+
+## Hands-on tools
+
+- `scripts/inspect_tree.py` — trains a tiny shallow model and prints a real tree
+  (split conditions, leaf weights, gain, cover), plus a feature-importance plot.
+  The concrete companion to notes 02/04/05.
 
 ## Conventions
 
