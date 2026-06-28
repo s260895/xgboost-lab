@@ -111,6 +111,7 @@ def _train_and_log(
         metrics=metrics,
         input_example=sample,
         predictions_example=sample_pred,
+        evals_result=result.evals_result,
         tags=tags,
         registered_model_name=f"xgblab-{dataset_name}" if register else None,
     )

@@ -85,6 +85,35 @@ def enable_autolog_guarded() -> bool:
         return False
 
 
+def log_learning_curves(
+    evals_result: dict[str, dict[str, list[float]]],
+) -> None:
+    """Log per-boosting-round metric curves as *stepped* MLflow metrics.
+
+    ``evals_result`` is XGBoost's history, shaped
+    ``{split: {metric: [value_per_round, ...]}}`` (e.g. ``{"train": {"logloss":
+    [...]}, "val": {...}}``). A metric logged once shows as a single bar in the
+    UI; logged with a ``step`` for each round it renders as a **line chart** — the
+    actual learning curve you use to spot over/underfitting.
+
+    Curve keys use a hyphen (``train-logloss``, ``val-auc``) — matching XGBoost's
+    own ``validation_0-logloss`` convention — to stay distinct from the
+    underscore-named summary scalars (``val_logloss``) logged in :func:`log_run`.
+    """
+    series = {
+        f"{split}-{metric}": values
+        for split, metric_dict in evals_result.items()
+        for metric, values in metric_dict.items()
+    }
+    if not series:
+        return
+    n_rounds = len(next(iter(series.values())))
+    # One log call per round (each carries all series), so a 140-round run is
+    # ~140 calls rather than ~560.
+    for step in range(n_rounds):
+        mlflow.log_metrics({key: vals[step] for key, vals in series.items()}, step=step)
+
+
 def log_run(
     *,
     run_name: str,
@@ -93,6 +122,7 @@ def log_run(
     metrics: dict[str, float],
     input_example: pd.DataFrame,
     predictions_example: np.ndarray,
+    evals_result: dict[str, dict[str, list[float]]] | None = None,
     tags: dict[str, str] | None = None,
     model_format: str = "json",
     registered_model_name: str | None = None,
@@ -100,12 +130,17 @@ def log_run(
     """Manually log one run (the production path) and return its run id.
 
     ``mlflow.xgboost.log_model`` accepts both a native ``Booster`` and a
-    scikit-learn estimator, so this works for either API.
+    scikit-learn estimator, so this works for either API. Pass ``evals_result``
+    to also log the per-round train/val learning curves.
     """
     with mlflow.start_run(run_name=run_name) as run:
         # log_params stringifies non-scalar values (e.g. an eval_metric list).
         mlflow.log_params(params)
+        # Summary scalars (final/best values) — these populate the runs table.
         mlflow.log_metrics(metrics)
+        # Per-round learning curves (train vs. val over boosting rounds).
+        if evals_result:
+            log_learning_curves(evals_result)
         if tags:
             mlflow.set_tags(tags)
 

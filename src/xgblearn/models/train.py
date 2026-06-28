@@ -77,10 +77,14 @@ def train_sklearn(splits: Splits, cfg: ModelConfig) -> TrainResult:
     )
     best_it = getattr(model, "best_iteration", None)
     best_score = getattr(model, "best_score", None)
+    # sklearn names eval sets validation_0/validation_1 (in eval_set order).
+    # Rename to train/val so the recorded history matches the native API.
+    rename = {"validation_0": "train", "validation_1": "val"}
+    evals_result = {rename.get(k, k): v for k, v in model.evals_result().items()}
     return TrainResult(
         model=model,
         api="sklearn",
-        evals_result=model.evals_result(),
+        evals_result=evals_result,
         best_iteration=int(best_it) if best_it is not None else None,
         best_score=float(best_score) if best_score is not None else None,
     )
