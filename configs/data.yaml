@@ -1,0 +1,13 @@
+# Data + splitting config. Loaded into xgblearn.config.DataConfig.
+# Stage 1 default: Breast Cancer Wisconsin (small binary classification).
+
+dataset: breast_cancer   # loader key (see src/xgblearn/data/loaders.py, Stage 1)
+seed: 42
+
+# Split discipline: a sacred test set (touched once) + a separate validation
+# set that drives early stopping. val_size is a fraction of the non-test data.
+test_size: 0.2
+val_size: 0.2
+stratify: true            # preserve class balance in each split
+
+raw_dir: data/raw         # cache location for downloaded datasets

@@ -1,0 +1,26 @@
+# Baseline model config. Loaded into xgblearn.config.ModelConfig.
+# Sensible, conservative defaults for the breast-cancer baseline (Stage 1).
+
+objective: binary:logistic
+eval_metric: [logloss, auc]   # logloss drives early stopping; auc for reference
+
+device: cuda                  # modern GPU API (set to "cpu" on a CPU-only box)
+tree_method: hist             # required for native categorical + constraints
+
+num_boost_round: 500          # upper bound; early stopping finds the real number
+early_stopping_rounds: 50     # ~10% of num_boost_round
+enable_categorical: false     # breast cancer is all-numeric
+
+seed: 42
+
+# Tunable hyperparameters (sklearn-style names; XGBoost accepts the aliases too:
+# learning_rate=eta, reg_alpha=alpha, reg_lambda=lambda, gamma=min_split_loss).
+params:
+  learning_rate: 0.1
+  max_depth: 4
+  min_child_weight: 1.0
+  subsample: 0.9
+  colsample_bytree: 0.9
+  gamma: 0.0
+  reg_alpha: 0.0
+  reg_lambda: 1.0

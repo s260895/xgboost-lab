@@ -1,3 +1,19 @@
+# --- xgboost-lab project-specific ignores ---------------------------------
+# Data is downloaded/cached locally, never committed.
+data/raw/*
+data/interim/*
+data/processed/*
+!data/**/.gitkeep
+# Serialized models and MLflow stores.
+models/*
+!models/.gitkeep
+mlruns/
+mlartifacts/
+mlflow.db
+# Local virtualenv name used by this repo.
+.venv/
+# ---------------------------------------------------------------------------
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

@@ -1,0 +1,28 @@
+# Runtime dependencies — pinned for a venv install (NOT conda, NOT uv).
+#
+#   python -m venv .venv
+#   .venv\Scripts\Activate.ps1          # Windows PowerShell
+#   source .venv/bin/activate           # Linux / WSL2 / macOS
+#   pip install --upgrade pip
+#   pip install -r requirements.txt -r requirements-dev.txt
+#   pip install -e .
+#
+# Versions verified against PyPI / official docs on 2026-06-28.
+# This list mirrors [project.dependencies] in pyproject.toml — keep in sync.
+
+xgboost==3.3.0            # rel. 2026-06-17; requires Python >=3.12; stock CUDA-12 wheel
+                          # ships native sm_120 (Blackwell) kernels — no nightly/source build.
+scikit-learn>=1.5,<2
+pandas>=2.2,<3
+numpy>=1.26
+mlflow>=2.19              # autolog certified only for xgboost<=3.2.0 — we use manual
+                          # logging as the production path (see tracking/mlflow_utils.py).
+optuna>=4.0
+optuna-integration>=4.0   # XGBoostPruningCallback now lives here (not optuna.integration).
+shap>=0.46
+matplotlib>=3.9
+seaborn>=0.13
+pyyaml>=6.0
+pydantic>=2.7
+pyarrow>=16
+category_encoders>=2.6    # target / GLMM encoding demos (Stage 3, leakage-safe)

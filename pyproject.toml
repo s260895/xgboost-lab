@@ -1,0 +1,100 @@
+# pyproject.toml — project metadata + tooling config for xgboost-lab.
+#
+# Teaching notes:
+#   * The *repo* is `xgboost-lab`; the *importable package* is `xgblearn`
+#     (same split as scikit-learn the repo vs. sklearn the import).
+#   * We use the `src/` layout: the package lives under `src/xgblearn/`. This
+#     prevents accidentally importing the package from the working directory
+#     instead of the installed copy — a classic source of "works on my machine".
+#   * Build backend is hatchling (PEP 517). `pip install -e .` builds an
+#     editable install so notebooks/scripts import the live source.
+#   * Runtime deps are pinned in requirements.txt (the venv install path the
+#     README documents). We mirror them here so `pip install .` alone also
+#     produces a working environment — keep the two in sync.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xgblearn"
+version = "0.1.0"
+description = "Learning-oriented, production-aware XGBoost laboratory (GPU on Blackwell, leakage-safe FE, MLflow, Optuna)."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Sumeet Zankar" }]
+keywords = ["xgboost", "machine-learning", "gpu", "mlflow", "optuna", "shap"]
+
+# Mirror of requirements.txt (see note above). Versions verified 2026-06-28.
+dependencies = [
+    "xgboost==3.3.0",
+    "scikit-learn>=1.5,<2",
+    "pandas>=2.2,<3",
+    "numpy>=1.26",
+    "mlflow>=2.19",
+    "optuna>=4.0",
+    "optuna-integration>=4.0",
+    "shap>=0.46",
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+    "pyyaml>=6.0",
+    "pydantic>=2.7",
+    "pyarrow>=16",
+    "category_encoders>=2.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/sumeet/xgboost-lab"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/xgblearn"]
+
+# --------------------------------------------------------------------------- #
+# Ruff — single tool for lint + format (replaces black + flake8 + isort).
+# --------------------------------------------------------------------------- #
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["src", "scripts", "tests"]
+
+[tool.ruff.lint]
+# A pragmatic, teaching-friendly rule set. E/F = pyflakes/pycodestyle,
+# I = isort, UP = pyupgrade, B = bugbear, SIM = simplify, NPY = numpy.
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "NPY"]
+ignore = [
+    "E501", # line length is handled by the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebooks and scripts may use top-level expressions / prints freely.
+"scripts/*" = ["E402"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# --------------------------------------------------------------------------- #
+# mypy — static type checking. Reasonably strict, but lenient on third-party
+# libs that ship incomplete stubs (xgboost, shap, etc.).
+# --------------------------------------------------------------------------- #
+[tool.mypy]
+python_version = "3.12"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+check_untyped_defs = true
+ignore_missing_imports = true
+files = ["src", "scripts"]
+
+# --------------------------------------------------------------------------- #
+# pytest
+# --------------------------------------------------------------------------- #
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+markers = [
+    "gpu: tests that require a CUDA-capable GPU (skipped automatically when absent)",
+    "slow: longer-running tests (data download, full training)",
+]
